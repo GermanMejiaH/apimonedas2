@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # API de Festivos (NodeJS + MongoDB)
+  dockerbdfestivos:
+    image: mongo:latest
+    container_name: dockerbdfestivos
+    networks:
+      - redcalendario
+    ports:
+      - "27017:27017"
+
+  dockerapifestivos:
+    build: ./festivos-api-node
+    container_name: dockerapifestivos
+    networks:
+      - redcalendario
+    ports:
+      - "3000:3000"
+    depends_on:
+      - dockerbdfestivos
+    environment:
+      - MONGODB_URI=mongodb://dockerbdfestivos:27017
+
+  # API de Calendario (SpringBoot + Postgres)
+  dockerbdcalendario:
+    image: postgres:latest
+    container_name: dockerbdcalendario
+    networks:
+      - redcalendario
+    environment:
+      POSTGRES_DB: festivos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+
+  dockerapicalendario:
+    build: ./festivos-api-spring
+    container_name: dockerapicalendario
+    networks:
+      - redcalendario
+    ports:
+      - "8080:8080"
+    depends_on:
+      - dockerbdcalendario
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://dockerbdcalendario:5432/festivos
+
+networks:
+  redcalendario:
+    driver: bridge
