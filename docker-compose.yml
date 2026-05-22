@@ -11,7 +11,7 @@ services:
       - "27017:27017"
 
   dockerapifestivos:
-    build: ./festivos-api-node
+    build: ./Evaluacion4_Seguimiento/festivos-api-node
     container_name: dockerapifestivos
     networks:
       - redcalendario
@@ -36,7 +36,7 @@ services:
       - "5433:5432"
 
   dockerapicalendario:
-    build: ./festivos-api-spring
+    build: ./Evaluacion4_Seguimiento/festivos-api-spring
     container_name: dockerapicalendario
     networks:
       - redcalendario
@@ -46,6 +46,53 @@ services:
       - dockerbdcalendario
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://dockerbdcalendario:5432/festivos
+
+  # Base de datos para API Monedas (PostgreSQL)
+  db-monedas:
+    image: postgres:latest
+    container_name: db-monedas
+    environment:
+      POSTGRES_DB: monedas
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./bd:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+
+  # API Monedas (Java/Spring Boot)
+  api-monedas:
+    build: 
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: api-monedas
+    ports:
+      - "8081:8081"
+    depends_on:
+      - db-monedas
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db-monedas:5432/monedas
+
+  # Base de datos para API División Política (MongoDB)
+  db-division:
+    image: mongo:latest
+    container_name: db-division
+    ports:
+      - "27017:27017"
+
+  # API División Política (Node.js)
+  api-division:
+    build: 
+      context: ./api-division-politica
+      dockerfile: Dockerfile
+    container_name: api-division
+    ports:
+      - "3030:3030"
+    depends_on:
+      - db-division
+    environment:
+      - DB_HOST=db-division
+      - PORT=3030
 
 networks:
   redcalendario:

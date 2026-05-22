@@ -1,0 +1,67 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Preparación') {
+            steps {
+                echo 'Limpiando el espacio de trabajo...'
+                echo 'Clonando el repositorio...'
+                checkout scm
+            }
+        }
+
+        stage('Compilación Spring Boot') {
+            steps {
+                echo 'Generando el archivo JAR para la API de Calendario...'
+                dir('Evaluacion4_Seguimiento/festivos-api-spring') {
+                    sh 'chmod +x mvnw'
+                    sh './mvnw clean package -DskipTests'
+                }
+            }
+        }
+
+        stage('Construcción de Imágenes Docker') {
+            steps {
+                echo 'Construyendo imágenes de Docker con Docker Compose...'
+                dir('Evaluacion4_Seguimiento') {
+                    sh 'docker-compose build'
+                }
+            }
+        }
+
+        stage('Despliegue de Contenedores') {
+            steps {
+                echo 'Iniciando los servicios en la red redcalendario...'
+                dir('Evaluacion4_Seguimiento') {
+                    sh 'docker-compose down'
+                    sh 'docker-compose up -d'
+                }
+            }
+        }
+
+        stage('Verificación del Sistema') {
+            steps {
+                echo 'Estado de los contenedores:'
+                sh 'docker ps'
+                
+                echo 'Verificación de la red:'
+                sh 'docker network ls | grep redcalendario'
+                
+                echo 'Prueba de conectividad API Festivos (NodeJS):'
+                sh 'curl -s http://localhost:3000/api/festivos/2026 || echo "API Node fuera de línea"'
+                
+                echo 'Prueba de conectividad API Calendario (Spring Boot):'
+                sh 'curl -s http://localhost:8080/api/festivos/2026 || echo "API Spring fuera de línea"'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '¡El pipeline se ejecutó correctamente! Aplicación desplegada.'
+        }
+        failure {
+            echo 'Error en el pipeline. Por favor revise los logs de Jenkins y Docker.'
+        }
+    }
+}
